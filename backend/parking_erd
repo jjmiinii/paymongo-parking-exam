@@ -1,0 +1,51 @@
+Vehicles
+    id
+    plate_no
+    vehicle_type_id // vehicle_type_id
+
+VehicleType 
+    id
+    size
+    description
+
+ Parking
+    id
+    entrance_type 
+    distance
+    restriction
+
+ParkingRates
+    id
+    parking_slot_id 
+    rate_id
+
+Rates
+    id
+    price
+    time
+
+
+Transaction
+    id
+    vehicle_id 
+    plate_no
+    vehicle_description
+    created_at
+    updated_at
+    
+
+Detailed Transaction
+    id
+    master_transaction_id
+    parking_id
+    fee
+    status
+    createdAt
+    
+
+
+
+
+
+
+    
