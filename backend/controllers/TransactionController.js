@@ -1,6 +1,5 @@
 import _ from 'lodash'
 import { Op } from 'sequelize';
-import moment from 'moment';
 import  db  from '../models/';
 import helper from '../Utils/helpers';
 
@@ -99,9 +98,11 @@ class TransactionController {
                 throw ({statusCode: 404, message: 'No available Parking!'})
             }
 
-            //get the hour of the vehicle when park again
+            //check if has previous transaction
             if(transactionInfo && transactionInfo.detailed_transactions[0].entryExitDateTime){
+                //get the minutes of the vehicle when park again
                 const parkingDurationInMinutes = helper.getParkDurationInMinutes({startDate: transactionInfo.detailed_transactions[0].entryExitDateTime, endDate: DATE_TIME_NOW})
+                //if vehicle park again before 1 hour will add to detail transaction 
                 if(parkingDurationInMinutes < 60){
                     await DetailedTransaction.create({
                         transactionId: transactionInfo.id,
@@ -110,6 +111,7 @@ class TransactionController {
                         status: 1
                     },{  transaction: seqTransaction });
                 }
+                //create master with slave transaction
             } else {
                 let [transaction, transactionCreated] = await Transaction.findOrCreate({
                     where: { plateNumber },
@@ -139,6 +141,7 @@ class TransactionController {
                 }
             }
 
+            //commit transaction
             await seqTransaction.commit();
             const data = await Transaction.findOne({
                 where: { plateNumber },
@@ -154,6 +157,7 @@ class TransactionController {
             return res.status(200).json({ data, statusCode: 200});
         } catch (e) {
             console.log(e);
+            //roll back
             await seqTransaction.rollback();
             return res.status(e.statusCode || 500).json({ ...e })
         }
