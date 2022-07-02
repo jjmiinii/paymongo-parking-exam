@@ -50,17 +50,19 @@ db.Vehicle.belongsTo(db.VehicleType, {
 
 //transaction association
 db.Transaction.hasMany(db.DetailedTransaction);
-db.DetailedTransaction.belongsTo(db.Transaction, {
-    foreignKey: 'transactionId'
-});
 db.Transaction.belongsTo(db.Vehicle, {
     foreignKey: 'vehicleId'
+});
+
+//detailed transaction association
+db.DetailedTransaction.belongsTo(db.Transaction, {
+    foreignKey: 'transactionId'
 });
 db.DetailedTransaction.belongsTo(db.Parking, {
     foreignKey: 'parkingId'
 })
 
-//parking capacity
+//parking capacity association
 db.ParkingCapacity.belongsTo(db.Parking, {
     foreignKey: 'parkingId'
 });
@@ -72,8 +74,6 @@ db.ParkingCapacity.belongsTo(db.Capacity, {
 db.ParkingSetting.belongsTo(db.Capacity), {
     foreignKey: 'capacityId'
 }
-
-
 
 db.sequelize.sync({force: false});
 

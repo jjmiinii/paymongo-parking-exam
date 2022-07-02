@@ -1,7 +1,8 @@
-import  db  from '../models/';
-import { Op, Sequelize } from 'sequelize';
 import _ from 'lodash'
-import TransactionService from '../services/TransactionService';
+import { Op } from 'sequelize';
+import moment from 'moment';
+import  db  from '../models/';
+import helper from '../Utils/helpers';
 
 const { 
     Vehicle,
@@ -11,168 +12,151 @@ const {
     Parking,
     ParkingCapacity,
     ParkingSetting,
-    Capacity
+    Capacity,
+    sequelize
 } = db;
+
+const DATE_TIME_NOW = new Date().toISOString();
 
 class TransactionController {
     constructor() {
+        
     };
+    floorPriorization = (floors, entryFloor) =>{
+        const floorList = helper.toArray(floors, 'floor');
+        let  remainingFloors =  _.remove(floorList, (floor =>  floor !== entryFloor));
+        remainingFloors.unshift(entryFloor);
+        return remainingFloors;
+    }
     create = async (req, res) => {
         const { 
             plateNumber,
             vehicleTypeId,
         } = req.body;
-
-        let vehicle = await Vehicle.findOne({
-            where: { plateNumber },
-            include: [{
-                model: VehicleType
-            }],
-
-        });
-
-        if(!vehicle){
-            vehicle = await Vehicle.create({
-                plateNumber,
-                vehicleTypeId
-            }, {include: [VehicleType]});
-
-            //tobe deleted
-            vehicle = await Vehicle.findOne({
+        let seqTransaction = await sequelize.transaction();
+        try {
+            const transactionInfo = await Transaction.findOne({
                 where: { plateNumber },
-                include: [VehicleType]
+                order: [ ['id' , 'DESC']],
+                include: [{
+                    model: DetailedTransaction,
+                    limit: 1,
+                    order: [ ['id' , 'DESC']],
+                }],
             });
-        }
 
-        const allowedParking = await ParkingSetting.findAll({
-            where :{
-                vehicleTypeId: vehicleTypeId
+            //check parking status is still ACTIVE
+            if(transactionInfo && transactionInfo.detailed_transactions[0].status === 1){
+                throw ({statusCode: 400, message: 'Vehicle is still in park!'})
             }
-        })
 
-        let allowedParkingArray = allowedParking.map(element => element.capacityId);
+            const [ vehicle, vehicleCreated ] = await Vehicle.findOrCreate({ 
+                where: { plateNumber },
+                defaults: {
+                    plateNumber,
+                    vehicleTypeId
+                },
+                transaction: seqTransaction
+            });
 
+            //get vehicle allowed parking type ex. S - SP, MP, LP 
+            let allowedParkings = await ParkingSetting.findAll({ where :{ vehicleTypeId }, attributes:['capacityId']}); 
+            allowedParkings = helper.toArray(allowedParkings, 'capacityId');
+    
+    
+            // get all occupied parkings
+            //1:ACTIVE, 2:COMPLETED
+            let occupiedParkings = await DetailedTransaction.findAll({ where: { status: 1 }, attributes:['parkingId'] });
 
-        const {rows : parkingFloors} = await Parking.findAndCountAll({
-            group:['floor'],
-            attributes: ['floor']
-        });
+            //convert to array
+            occupiedParkings = helper.toArray(occupiedParkings, 'parkingId');
+            const parkingFloors = await Parking.findAll({ group:['floor'], attributes: ['floor'] });
 
-        // get all occupied parkings
-        let occupiedParking = await DetailedTransaction.findAll({
-            where: {
-                status: 1 //ACTIVE
-            },
-            attributes:['parkingId'],
-            // include: [{
-            //     model: Transaction,
-            //     include: [Vehicle]
-            // }, {
-            //     model: Parking
-            // }]
-        });
-        let occupiedParkingArray = [];
-        occupiedParking.forEach(element => occupiedParkingArray.push(element.parkingId));
-
-        let floorFound = false;
-        let availableParking = [];
-
-        let arrayFloors =[];
-        parkingFloors.forEach(element => arrayFloors.push(element.floor));
-        arrayFloors =  _.remove(arrayFloors, ((element) =>  element !== req.body.floor));
-        arrayFloors.unshift(req.body.floor);
-
-        
-        for(let floor of arrayFloors){
-            availableParking = await ParkingCapacity.findOne({
-                where: {
-                    parkingId: { [Op.notIn]: [...occupiedParkingArray] },
-                    capacityId: { [Op.in]: [...allowedParkingArray] }
-                }, 
-                include: [
-                    { 
+            //set entry floor in first
+            const floors = this.floorPriorization(parkingFloors, req.body.floor)
+    
+            let availableParking = [];
+            //find parking with the nearest possible from entry point
+            for(let floor of floors){
+                availableParking = await ParkingCapacity.findOne({
+                    where: {
+                        parkingId: { [Op.notIn]: [...occupiedParkings] },
+                        capacityId: { [Op.in]: [...allowedParkings] }
+                    }, 
+                    include: [{ 
                         model: Parking,
-                        where : {
-                            floor
-                        },
-                    },
-                    { 
-                        model: Capacity
-                    }
-                ] ,
-                order: [ 
-                    [Parking, 'distance', 'ASC']
-                ]
-            })
-            if(availableParking){
-                floorFound = true;
-                break;
+                        where : { floor }
+                    },{ 
+                        model: Capacity 
+                    }],
+                    order: [ [Parking, 'distance', 'ASC'] ]
+                })
+                //stop if floor found
+                if(availableParking) break;
             }
-        }
-        // console.log('tes');
-        return res.json(availableParking);
+    
+            if(!availableParking){
+                throw ({statusCode: 404, message: 'No available Parking!'})
+            }
 
-        if(!floorFound){
-            return res.status(500).json(1);
-        }
+            //get the hour of the vehicle when park again
+            if(transactionInfo && transactionInfo.detailed_transactions[0].entryExitDateTime){
+                const parkingDurationInMinutes = helper.getParkDurationInMinutes({startDate: transactionInfo.detailed_transactions[0].entryExitDateTime, endDate: DATE_TIME_NOW})
+                if(parkingDurationInMinutes < 60){
+                    await DetailedTransaction.create({
+                        transactionId: transactionInfo.id,
+                        parkingId: availableParking.parkingId,
+                        fee: 0,
+                        status: 1
+                    },{  transaction: seqTransaction });
+                }
+            } else {
+                let [transaction, transactionCreated] = await Transaction.findOrCreate({
+                    where: { plateNumber },
+                    defaults: {
+                        vehicleId: vehicle.id,
+                        plateNumber: vehicle.plateNumber,
+                    },
+                    order: [ ['createdAt' , 'DESC']],
+                    include: [{
+                        model: DetailedTransaction,
+                        limit: 1,
+                        order: [ ['dateTime' , 'DESC']],
+                        include: [Parking],
+                    }, {
+                        model: Vehicle
+                    }],
+                    transaction: seqTransaction
+                });
+    
+                if(transactionCreated){
+                    await DetailedTransaction.create({
+                        transactionId: transaction.id,
+                        parkingId: availableParking.parkingId,
+                        fee: 0,
+                        status: 1
+                    },{  transaction: seqTransaction });
+                }
+            }
 
-        // return res.json({availableParking});
-        let transaction = await Transaction.findOne({
-            where: { plateNumber },
-            order: [ ['createdAt' , 'DESC']],
-            include: ['detailed_transactions']
-        });
-
-        if(!transaction){
-            transaction = await Transaction.create({
-                vehicleId: vehicle.id,
-                plateNumber: vehicle.plateNumber,
-                vehicleDescription: vehicle.vehicle_type.description
-            })
-
-
-            await DetailedTransaction.create({
-                transactionId: transaction.id,
-                parkingId: availableParking.parkingId,
-                fee: 30,
-                status: 1 //ACTIVE
+            await seqTransaction.commit();
+            const data = await Transaction.findOne({
+                where: { plateNumber },
+                order: [ ['createdAt' , 'DESC']],
+                include: [{
+                    model: DetailedTransaction,
+                    include: [Parking]
+                },{
+                    model: Vehicle
+                }]
             });
+            
+            return res.status(200).json({ data, statusCode: 200});
+        } catch (e) {
+            console.log(e);
+            await seqTransaction.rollback();
+            return res.status(e.statusCode || 500).json({ ...e })
         }
-
-        
-
-
-
-        return res.status(200).json({transaction});
-    }
+    } 
 }
-// const TransactionController = {
-//     create: async (req, res)  => {
-//         const { 
-//             plateNumber
-//         } = req.body;
-
-//         const vehicle = await Vehicle.findOne({
-//             where: {
-//                 plateNumber
-//             }
-//         });
-
-
-
-//         return res.status(200).json({vehicle});
-//     },
-//     read: async (req ,res) => {
-//         let vehicleType = await VehicleType.findAll({});
-
-//         console.log(vehicleType)
-//         return res.status(200).send(vehicleType);
-//     },
-//     update: async (req, res)  => {
-//         return res.status(200).send('Hello World Update');
-//     },
-//     delete: async (req, res)  => {
-//         return res.status(200).send('Hello World Delete');
-//     },
-// }
 export default TransactionController;

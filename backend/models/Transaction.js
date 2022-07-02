@@ -9,7 +9,6 @@ export default (sequelize, DataTypes) => sequelize.define('transactions', {
     },
     vehicleId: { type: DataTypes.INTEGER, allowNull:false },
     plateNumber: { type: DataTypes.STRING, allowNull:false },
-    vehicleDescription: { type: DataTypes.STRING, allowNull:false },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
 })
