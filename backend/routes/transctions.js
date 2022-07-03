@@ -11,7 +11,7 @@ const router = Router();
 
  //transaction routes
 //  router.get('/', TransactionController.read);
- router.post('/', transactionController.create);
+ router.post('/', transactionController.park);
  //router.put('/:id', TransactionController.update);
  //router.delete('/:id', TransactionController.delete);
 

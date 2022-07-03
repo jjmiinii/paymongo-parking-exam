@@ -1,166 +1,44 @@
-import _ from 'lodash'
-import { Op } from 'sequelize';
-import  db  from '../models/';
-import helper from '../Utils/helpers';
+import BaseController from "./BaseController";
+import transactionService from "../services/TransactionService";
 
-const { 
-    Vehicle,
-    VehicleType,
-    Transaction,
-    DetailedTransaction,
-    Parking,
-    ParkingCapacity,
-    ParkingSetting,
-    Capacity,
-    sequelize
-} = db;
-
-const DATE_TIME_NOW = new Date().toISOString();
-
-class TransactionController {
+export default class TransactionController extends BaseController{
     constructor() {
-        
+        super();
+        this.transactionService = new transactionService();
     };
-    floorPriorization = (floors, entryFloor) =>{
-        const floorList = helper.toArray(floors, 'floor');
-        let  remainingFloors =  _.remove(floorList, (floor =>  floor !== entryFloor));
-        remainingFloors.unshift(entryFloor);
-        return remainingFloors;
-    }
-    create = async (req, res) => {
-        const { 
-            plateNumber,
-            vehicleTypeId,
-        } = req.body;
-        let seqTransaction = await sequelize.transaction();
+
+    /**
+     * Handle vehicle parking from entrance
+     * Allocate vehicle in to the nearest possible parkin from entrance
+     * 
+     * @author Danielle Aian Anicete
+     * @param  {} req
+     * @param  {} res
+     * @param  {} next
+     * 
+     * @returns 200 if the transaction is successful
+    */
+    
+    park = async (req, res) =>{
+        let data = {};
         try {
-            const transactionInfo = await Transaction.findOne({
-                where: { plateNumber },
-                order: [ ['id' , 'DESC']],
-                include: [{
-                    model: DetailedTransaction,
-                    limit: 1,
-                    order: [ ['id' , 'DESC']],
-                }],
-            });
-
-            //check parking status is still ACTIVE
-            if(transactionInfo && transactionInfo.detailed_transactions[0].status === 1){
-                throw ({statusCode: 400, message: 'Vehicle is still in park!'})
-            }
-
-            const [ vehicle, vehicleCreated ] = await Vehicle.findOrCreate({ 
-                where: { plateNumber },
-                defaults: {
-                    plateNumber,
-                    vehicleTypeId
-                },
-                transaction: seqTransaction
-            });
-
-            //get vehicle allowed parking type ex. S - SP, MP, LP 
-            let allowedParkings = await ParkingSetting.findAll({ where :{ vehicleTypeId }, attributes:['capacityId']}); 
-            allowedParkings = helper.toArray(allowedParkings, 'capacityId');
-    
-    
-            // get all occupied parkings
-            //1:ACTIVE, 2:COMPLETED
-            let occupiedParkings = await DetailedTransaction.findAll({ where: { status: 1 }, attributes:['parkingId'] });
-
-            //convert to array
-            occupiedParkings = helper.toArray(occupiedParkings, 'parkingId');
-            const parkingFloors = await Parking.findAll({ group:['floor'], attributes: ['floor'] });
-
-            //set entry floor in first
-            const floors = this.floorPriorization(parkingFloors, req.body.floor)
-    
-            let availableParking = [];
-            //find parking with the nearest possible from entry point
-            for(let floor of floors){
-                availableParking = await ParkingCapacity.findOne({
-                    where: {
-                        parkingId: { [Op.notIn]: [...occupiedParkings] },
-                        capacityId: { [Op.in]: [...allowedParkings] }
-                    }, 
-                    include: [{ 
-                        model: Parking,
-                        where : { floor }
-                    },{ 
-                        model: Capacity 
-                    }],
-                    order: [ [Parking, 'distance', 'ASC'] ]
-                })
-                //stop if floor found
-                if(availableParking) break;
-            }
-    
-            if(!availableParking){
-                throw ({statusCode: 404, message: 'No available Parking!'})
-            }
-
-            //check if has previous transaction
-            if(transactionInfo && transactionInfo.detailed_transactions[0].entryExitDateTime){
-                //get the minutes of the vehicle when park again
-                const parkingDurationInMinutes = helper.getParkDurationInMinutes({startDate: transactionInfo.detailed_transactions[0].entryExitDateTime, endDate: DATE_TIME_NOW})
-                //if vehicle park again before 1 hour will add to detail transaction 
-                if(parkingDurationInMinutes < 60){
-                    await DetailedTransaction.create({
-                        transactionId: transactionInfo.id,
-                        parkingId: availableParking.parkingId,
-                        fee: 0,
-                        status: 1
-                    },{  transaction: seqTransaction });
-                }
-                //create master with slave transaction
-            } else {
-                let [transaction, transactionCreated] = await Transaction.findOrCreate({
-                    where: { plateNumber },
-                    defaults: {
-                        vehicleId: vehicle.id,
-                        plateNumber: vehicle.plateNumber,
-                    },
-                    order: [ ['createdAt' , 'DESC']],
-                    include: [{
-                        model: DetailedTransaction,
-                        limit: 1,
-                        order: [ ['dateTime' , 'DESC']],
-                        include: [Parking],
-                    }, {
-                        model: Vehicle
-                    }],
-                    transaction: seqTransaction
-                });
-    
-                if(transactionCreated){
-                    await DetailedTransaction.create({
-                        transactionId: transaction.id,
-                        parkingId: availableParking.parkingId,
-                        fee: 0,
-                        status: 1
-                    },{  transaction: seqTransaction });
-                }
-            }
-
-            //commit transaction
-            await seqTransaction.commit();
-            const data = await Transaction.findOne({
-                where: { plateNumber },
-                order: [ ['createdAt' , 'DESC']],
-                include: [{
-                    model: DetailedTransaction,
-                    include: [Parking]
-                },{
-                    model: Vehicle
-                }]
-            });
-            
-            return res.status(200).json({ data, statusCode: 200});
-        } catch (e) {
-            console.log(e);
-            //roll back
-            await seqTransaction.rollback();
-            return res.status(e.statusCode || 500).json({ ...e })
+            data = await this.transactionService.enterParking(req);
+        } catch(e) {
+            data = e;
         }
-    } 
+        
+        return res.status(200).json({ ...data })   
+    }
+
+    unPark = async (req, res) =>{
+        let data = {};
+        try {
+            data = await this.transactionService.enterParking(req);
+        } catch(e) {
+            data = e;
+        }
+        
+        return res.status(200).json({ ...data })   
+    }
+
 }
-export default TransactionController;

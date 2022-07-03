@@ -41,7 +41,7 @@ db.Capacity = Model.Capacity(sequelize, DataTypes);
 db.ParkingCapacity = Model.ParkingCapacity(sequelize, DataTypes);
 db.Transaction = Model.Transaction(sequelize, DataTypes);
 db.DetailedTransaction = Model.DetailedTransaction(sequelize, DataTypes);
-db.ParkingSetting = Model.ParkingSetting(sequelize, DataTypes);
+db.VechicleTypeCapacity = Model.VechicleTypeCapacity(sequelize, DataTypes);
 
 //vehicle association
 db.Vehicle.belongsTo(db.VehicleType, {
@@ -71,7 +71,7 @@ db.ParkingCapacity.belongsTo(db.Capacity, {
 });
 
 //parking settings
-db.ParkingSetting.belongsTo(db.Capacity), {
+db.VechicleTypeCapacity.belongsTo(db.Capacity), {
     foreignKey: 'capacityId'
 }
 

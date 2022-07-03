@@ -7,7 +7,7 @@ import Vehicle from "./Vehicle";
 import VehicleType from "./VehicleType";
 import Transaction from "./Transaction";
 import DetailedTransaction from "./DetailedTransaction";
-import ParkingSetting from "./ParkingSetting";
+import VechicleTypeCapacity from "./VechicleTypeCapacity";
 
 export default { 
     Parking,
@@ -19,5 +19,5 @@ export default {
     VehicleType,
     Transaction,
     DetailedTransaction,
-    ParkingSetting
+    VechicleTypeCapacity
 };

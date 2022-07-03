@@ -1,4 +1,4 @@
-export default (sequelize, DataTypes) => sequelize.define('parking_settings', {
+export default (sequelize, DataTypes) => sequelize.define('vehicile_type_capacity', {
     id:{
         type:DataTypes.INTEGER,
         autoIncrement:true,
