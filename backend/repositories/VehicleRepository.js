@@ -5,11 +5,11 @@ export default class VehicleRepository extends BaseRepository{
         super();
     };
    
-    getVehicleTransaction = ({ plateNumber = ''}) =>{
-        return new Promise(async (resolve, reject) => {
-            const vehicleType = await VehicleType.findOne({ where: { id: vehicleTypeId }});
-            resolve(vehicleType);
-        });
-    }
+    // getVehicleTransaction = ({ queryParams = {}}) =>{
+    //     return new Promise(async (resolve, reject) => {
+    //         const vehicleType = await VehicleType.findOne({ where: { id: queryParams.vehicleTypeId }});
+    //         resolve(vehicleType);
+    //     });
+    // }
 
 }

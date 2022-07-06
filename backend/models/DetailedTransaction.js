@@ -7,9 +7,9 @@ export default (sequelize, DataTypes) => sequelize.define('detailed_transactions
     },
     transactionId: { type: DataTypes.INTEGER, allowNull:false },
     parkingId: { type: DataTypes.INTEGER, allowNull:false },
-    fee: { type: DataTypes.FLOAT, allowNull:false },
+    fee: { type: DataTypes.DECIMAL(10,2), allowNull:false },
+    duration: { type: DataTypes.INTEGER, allowNull:false },
     status: { type: DataTypes.INTEGER, allowNull:false },
-    entryExitDateTime:  DataTypes.DATE,
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
 });

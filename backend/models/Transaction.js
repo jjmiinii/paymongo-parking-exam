@@ -1,5 +1,3 @@
-import DetailedTransaction from "./DetailedTransaction";
-
 export default (sequelize, DataTypes) => sequelize.define('transactions', {
     id:{
         type:DataTypes.INTEGER,

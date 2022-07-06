@@ -15,4 +15,34 @@ export default class BaseRepository {
         this._ = _;
         this.Op = Op;
     }
+
+    create = async({body = {}, Model }) => {
+        return new Promise(async (resolve, reject) => {
+            const data = await Model.create({
+                ...body
+            })
+            resolve(data);
+        })
+    }
+
+    readAll = async({queryParams = {}, Model}) => {
+        return new Promise(async(resolve, reject) =>{
+            const data = await Model.findAll({
+                where: {
+                    ...queryParams
+                }
+            })
+        })
+    }
+
+    readOne = async({queryParams = {}, Model}) => {
+        return new Promise(async(resolve, reject) =>{
+            const data = await Model.findOne({
+                where: {
+                    ...queryParams
+                }
+            })
+            resolve(data);
+        })
+    }
 }

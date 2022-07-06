@@ -36,7 +36,7 @@ db.Vehicle = Model.Vehicle(sequelize, DataTypes);
 db.VehicleType = Model.VehicleType(sequelize, DataTypes);
 db.Parking = Model.Parking(sequelize, DataTypes);
 db.Rate = Model.Rate(sequelize, DataTypes);
-db.ParkingRate = Model.ParkingRate(sequelize, DataTypes);
+db.CapacityRate = Model.CapacityRate(sequelize, DataTypes);
 db.Capacity = Model.Capacity(sequelize, DataTypes);
 db.ParkingCapacity = Model.ParkingCapacity(sequelize, DataTypes);
 db.Transaction = Model.Transaction(sequelize, DataTypes);
@@ -70,8 +70,18 @@ db.ParkingCapacity.belongsTo(db.Capacity, {
     foreignKey: 'capacityId'
 });
 
-//parking settings
+//parking capacity association
 db.VechicleTypeCapacity.belongsTo(db.Capacity), {
+    foreignKey: 'capacityId'
+}
+
+
+//capacity rate
+db.CapacityRate.belongsTo(db.Rate), {
+    foreignKey: 'rateId'
+}
+
+db.CapacityRate.belongsTo(db.Capacity), {
     foreignKey: 'capacityId'
 }
 

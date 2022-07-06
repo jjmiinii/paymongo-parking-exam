@@ -1,19 +1,15 @@
 import { Router } from 'express';
-import bodyParser from 'body-parser';
 import TransactionController from '../controllers/TransactionController';
+import TransactionValidation from '../middlewares/validations/TransactionValidation';
 
 const transactionController  = new TransactionController();
+const transactionValidation = new TransactionValidation();
 
 const router = Router();
 
-// // parse application/json
-// app.use(bodyParser.json())
+router.post('/enter', transactionValidation.validatePark, transactionController.park);
+router.post('/exit', transactionValidation.validateUnPark, transactionController.unPark);
 
- //transaction routes
-//  router.get('/', TransactionController.read);
- router.post('/', transactionController.park);
- //router.put('/:id', TransactionController.update);
- //router.delete('/:id', TransactionController.delete);
 
  export default router;
 

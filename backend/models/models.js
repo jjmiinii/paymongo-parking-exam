@@ -2,7 +2,7 @@ import Parking from "./Parking";
 import Capacity from "./Capacity";
 import ParkingCapacity from "./ParkingCapacity";
 import Rate from "./Rate";
-import ParkingRate from "./ParkingRate";
+import CapacityRate from "./CapacityRate";
 import Vehicle from "./Vehicle";
 import VehicleType from "./VehicleType";
 import Transaction from "./Transaction";
@@ -12,7 +12,7 @@ import VechicleTypeCapacity from "./VechicleTypeCapacity";
 export default { 
     Parking,
     Rate,
-    ParkingRate,
+    CapacityRate,
     Capacity,
     ParkingCapacity,
     Vehicle,

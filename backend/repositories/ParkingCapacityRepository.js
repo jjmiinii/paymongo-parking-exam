@@ -5,16 +5,16 @@ export default class ParkingCapacityRepository extends BaseRepository{
         super();
     };
    
-    getAvailableParking = ({ occupiedParkings, allowedParkings, floor }) =>{
+    getAvailableParking = ({ queryParams = {} }) =>{
         return new Promise(async (resolve, reject) => {
             const availableParking = await this.db.ParkingCapacity.findOne({
                 where: {
-                    parkingId: { [this.Op.notIn]: [...occupiedParkings] },
-                    capacityId: { [this.Op.in]: [...allowedParkings] }
+                    capacityId: { [this.Op.in]: [...queryParams.allowedParkings] },
+                    parkingId: { [this.Op.notIn]: queryParams.occupiedParkings}
                 }, 
                 include: [{ 
                     model: this.db.Parking,
-                    where : { floor }
+                    where : { entryPoint: queryParams.entryPoint }
                 },{ 
                     model: this.db.Capacity 
                 }],

@@ -27,18 +27,17 @@ export default class TransactionController extends BaseController{
             data = e;
         }
         
-        return res.status(200).json({ ...data })   
+        return res.status(data.statusCode || 500).json({ ...data })   
     }
 
     unPark = async (req, res) =>{
         let data = {};
         try {
-            data = await this.transactionService.enterParking(req);
+            data = await this.transactionService.exitParking(req);
         } catch(e) {
             data = e;
         }
         
-        return res.status(200).json({ ...data })   
+        return res.status(data.statusCode || 500).json({ ...data })   
     }
-
 }

@@ -5,9 +5,9 @@ export default class VehicleTypeRepository extends BaseRepository{
         super();
     };
    
-    getVehicleType = ({ vehicleTypeId = 0 }) =>{
+    getVehicleType = ({ queryParams = {} }) =>{
         return new Promise(async (resolve, reject) => {
-            const vehicleType = await this.db.VehicleType.findOne({ where: { id: vehicleTypeId }});
+            const vehicleType = await this.db.VehicleType.findOne({ where: { id: queryParams.vehicleTypeId }});
             resolve(vehicleType);
         });
     }

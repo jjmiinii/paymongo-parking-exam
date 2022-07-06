@@ -5,37 +5,32 @@ export default class TransactionRepository extends BaseRepository{
         super();
     };
    
-    getVehicleTransaction = ({ plateNumber = '' }) =>{
+    getVehicleTransaction = ({ queryParams = {} }) =>{
         return new Promise(async (resolve, reject) => {
-            const transactionInfo = await this.db.Transaction.findOne({
-                where: { plateNumber },
-                order: [ ['id' , 'DESC']],
-                include: [{
-                    model: this.db.DetailedTransaction,
-                    limit: 1,
-                    order: [ ['id' , 'DESC']],
-                }],
-            });
+            let orders = [['id', 'DESC']];
 
-            resolve(transactionInfo);
-        });
-    }
-    getVehicleLatestCompleteDetailedTransaction = ({ plateNumber = '' }) =>{
-        return new Promise(async (resolve, reject) => {
-            const transaction = await this.db.Transaction.findOne({
-                where: { plateNumber },
-                order: [ ['id' , 'DESC']],
+            if(!queryParams.hasOwnProperty('limit')){
+                orders.push([this.db.DetailedTransaction,'id', 'DESC']);
+            }
+
+            const transactionInfo = await this.db.Transaction.findOne({
+                where: { 
+                    ...queryParams.where
+                 },
+                order: [
+                   ...orders
+                ],
                 include: [{
                     model: this.db.DetailedTransaction,
+                    order: [['id', 'DESC']],
+                    [queryParams.hasOwnProperty('limit') ? 'limit' : '']:queryParams.hasOwnProperty('limit') ? queryParams.limit : '',
                     include: [this.db.Parking]
                 },{
                     model: this.db.Vehicle
-                }]
+                }],
             });
-        resolve(transaction);
+            
+            resolve(transactionInfo);
         });
     }
-
-
-
 }

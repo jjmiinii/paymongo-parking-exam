@@ -1,8 +1,7 @@
  import _ from 'lodash'
  import { Op } from 'sequelize';
  import  db  from '../models/';
- import helper from '../Utils/helpers';
- 
+ import helper from '../Utils/helpers'; 
  
  /**
   * @class BaseService

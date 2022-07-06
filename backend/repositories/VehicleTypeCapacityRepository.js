@@ -5,11 +5,13 @@ export default class VehicleTypeCapacityRepository extends BaseRepository{
         super();
     };
    
-    getAllowedVehicleCapacity = ({ vehicleTypeId = 0 }) =>{
+    getAllowedVehicleCapacity = ({ queryParams = {} }) =>{
         return new Promise(async (resolve, reject) => {
-            let allowedParkings = await this.db.VechicleTypeCapacity.findAll({ where :{ vehicleTypeId }, attributes:['capacityId']});
-            allowedParkings = this.helper.toArray(allowedParkings, 'capacityId');
-
+            let allowedParkings = await this.db.VechicleTypeCapacity.findAll({
+                where :{ vehicleTypeId: queryParams.vehicleTypeId },
+                attributes:['capacityId']
+            });
+            allowedParkings = this.helper.toArray(allowedParkings, 'capacityId');            
             resolve(allowedParkings);
         });
     }
